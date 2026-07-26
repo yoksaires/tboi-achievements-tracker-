@@ -2,6 +2,8 @@
   "use strict";
 
   const STORAGE_KEY = "isaac-progress-v1";
+  const STEAM_ID_STORAGE_KEY = "isaac-steam-id-v1";
+  const GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbwasiap8-S5DcwhSGJIWH-KSDjRYTePdV7ypQVbNfCsPOGuL1Vi3mXhsvMqCcZDKM62/exec";
   const data = window.ISAAC_ACHIEVEMENTS_DATA;
   if (!data || !Array.isArray(data.achievements)) {
     document.body.innerHTML = "<p style='padding:40px;color:white'>Не удалось загрузить базу достижений.</p>";
@@ -452,6 +454,174 @@
   }
 
   // Events
+  function getSteamAchievementId(steamAchievement) {
+  const rawId =
+    steamAchievement?.apiname ??
+    steamAchievement?.name ??
+    "";
+
+  const id = Number(String(rawId).trim());
+
+  if (!Number.isInteger(id)) return null;
+  if (!byId.has(id)) return null;
+
+  return id;
+}
+
+async function syncProgressFromSteam() {
+  const savedSteamId =
+    localStorage.getItem(STEAM_ID_STORAGE_KEY) || "";
+
+  const enteredSteamId = prompt(
+    "Введите SteamID64 — 17 цифр, обычно начинается с 7656.\n\n" +
+    "Профиль и игровые подробности должны быть открыты.",
+    savedSteamId
+  );
+
+  if (enteredSteamId === null) return;
+
+  const steamId = enteredSteamId.trim();
+
+  if (!/^\d{17}$/.test(steamId)) {
+    showToast(
+      "Неверный Steam ID",
+      "Введите SteamID64, состоящий ровно из 17 цифр.",
+      true
+    );
+    return;
+  }
+
+  if (
+    !GAS_PROXY_URL.startsWith("https://script.google.com/macros/s/") ||
+    !GAS_PROXY_URL.endsWith("/exec")
+  ) {
+    showToast(
+      "Не настроен Steam-прокси",
+      "Вставьте URL Google Apps Script в GAS_PROXY_URL.",
+      true
+    );
+    return;
+  }
+
+  const button = $("#steam-sync");
+
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+
+  showToast(
+    "Загружаем достижения",
+    "Получаем данные из публичного Steam-профиля…"
+  );
+
+  try {
+    const proxyUrl = new URL(GAS_PROXY_URL);
+    proxyUrl.searchParams.set("steamid", steamId);
+
+    const response = await fetch(proxyUrl.toString(), {
+      method: "GET",
+      redirect: "follow",
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`Прокси вернул ошибку HTTP ${response.status}.`);
+    }
+
+    const result = await response.json();
+
+    if (result.error) {
+      throw new Error(String(result.error));
+    }
+
+    const playerStats = result.playerstats;
+
+    if (!playerStats) {
+      throw new Error(
+        "Steam не вернул playerstats. Проверьте Steam ID и приватность профиля."
+      );
+    }
+
+    if (playerStats.success === false) {
+      throw new Error(
+        playerStats.error ||
+        "Steam не разрешил получить достижения этого профиля."
+      );
+    }
+
+    const steamAchievements = playerStats.achievements;
+
+    if (!Array.isArray(steamAchievements)) {
+      throw new Error(
+        "В ответе Steam отсутствует список достижений. " +
+        "Проверьте, что игровые подробности профиля открыты."
+      );
+    }
+
+    const unlocked = new Set();
+    let recognizedCount = 0;
+
+    for (const steamAchievement of steamAchievements) {
+      const id = getSteamAchievementId(steamAchievement);
+
+      if (id === null) continue;
+
+      recognizedCount += 1;
+
+      if (Number(steamAchievement.achieved) === 1) {
+        unlocked.add(id);
+      }
+    }
+
+    if (recognizedCount === 0) {
+      console.log("Ответ Steam:", result);
+
+      throw new Error(
+        "Steam вернул достижения, но их ID не удалось распознать. " +
+        "Ответ выведен в консоль браузера."
+      );
+    }
+
+    state.unlocked = unlocked;
+
+    state.saveMeta = {
+      fileName: `Steam · ${steamId}`,
+      source: "steam",
+      steamId,
+      parsedAt: new Date().toISOString(),
+      achievementSlots: recognizedCount
+    };
+
+    localStorage.setItem(STEAM_ID_STORAGE_KEY, steamId);
+
+    saveProgress();
+    updateProgressUI();
+    render();
+
+    showToast(
+      "Steam-профиль загружен",
+      `Открыто достижений: ${unlocked.size} из ${achievements.length}.`
+    );
+
+    document
+      .querySelector("#catalog-title")
+      .scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+  } catch (error) {
+    console.error("Steam synchronization error:", error);
+
+    showToast(
+      "Не удалось загрузить Steam",
+      error.message || "Произошла неизвестная ошибка.",
+      true
+    );
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
   [$("#choose-file"), $("#header-load-button"), $("#replace-save")].forEach(button => {
     button.addEventListener("click", () => openModal(elements.guide));
   });
@@ -459,7 +629,7 @@
   $$('[data-close-guide]').forEach(el => el.addEventListener("click", () => closeModal(elements.guide)));
   $$('[data-close-achievement]').forEach(el => el.addEventListener("click", () => closeModal(elements.detailModal)));
   elements.fileInput.addEventListener("change", event => handleFile(event.target.files?.[0]));
-  $("#steam-soon").addEventListener("click", () => showToast("Steam-синхронизация пока отключена", "Сейчас используйте файл persistentgamedata.") );
+  $("#steam-sync").addEventListener("click", syncProgressFromSteam);
   elements.forget.addEventListener("click", () => {
     if (!confirm("Удалить сохранённый в браузере список открытых достижений? Сам файл игры не изменится.")) return;
     localStorage.removeItem(STORAGE_KEY);

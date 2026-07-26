@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#15110e">
+  <meta name="description" content="Каталог достижений The Binding of Isaac с локальной загрузкой прогресса из сохранения.">
+  <title>Isaac Progress — достижения</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-noise" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Isaac Progress — наверх">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48"><path d="M14 10c4-6 16-6 20 0 3 4 4 9 3 15-1 9-6 15-13 15S12 34 11 25c-1-6 0-11 3-15Z"/><path class="brand-eye" d="M17 22h4v5h-4zm10 0h4v5h-4z"/><path class="brand-mouth" d="M19 32c3 2 7 2 10 0"/></svg>
+      </span>
+      <span><strong>ISAAC PROGRESS</strong><small>достижения и прогресс</small></span>
+    </a>
+    <div class="header-actions">
+      <span class="local-badge"><i></i> Всё работает локально</span>
+      <button class="header-load-button" id="header-load-button" type="button">Загрузить сохранение</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">THE BINDING OF ISAAC</span>
+        <h1>Все достижения.<br><em>Теперь — с вашим прогрессом.</em></h1>
+        <p>Загрузите файл сохранения, и сайт отметит открытые и закрытые достижения. Файл обрабатывается только внутри браузера.</p>
+        <div class="hero-buttons">
+          <button class="primary-button" id="choose-file" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"/></svg>
+            Выбрать файл сохранения
+          </button>
+          <button class="steam-button" id="steam-soon" type="button" title="Функция в разработке">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="8" r="4"/><circle cx="8" cy="16" r="3"/><path d="m10 14 3-3M5 15l-3-1"/></svg>
+            Steam-синхронизация
+            <span>скоро</span>
+          </button>
+        </div>
+        <p class="privacy-line">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3m-12 0h14v10H5z"/></svg>
+          Сайт не отправляет сохранение и не изменяет его.
+        </p>
+      </div>
+
+      <aside class="progress-card" id="progress-card">
+        <div class="progress-card__top">
+          <div>
+            <span class="progress-kicker">Ваш прогресс</span>
+            <strong id="progress-percent">—</strong>
+          </div>
+          <div class="progress-ring" id="progress-ring" style="--progress:0">
+            <span id="ring-value">0%</span>
+          </div>
+        </div>
+        <div class="progress-bar"><i id="progress-bar-fill"></i></div>
+        <div class="progress-counts">
+          <span><b id="unlocked-count">—</b> открыто</span>
+          <span><b id="locked-count">—</b> закрыто</span>
+          <span><b>641</b> всего</span>
+        </div>
+        <div class="save-state" id="save-state">
+          <span class="save-state__icon">?</span>
+          <div><strong>Сохранение не загружено</strong><small>Пока показан полный справочник</small></div>
+        </div>
+        <button class="text-button" id="forget-progress" type="button" hidden>Сбросить загруженный прогресс</button>
+      </aside>
+    </section>
+
+    <section class="edition-stats" id="edition-stats" aria-label="Прогресс по изданиям"></section>
+
+    <section class="catalog-section" aria-labelledby="catalog-title">
+      <div class="catalog-heading">
+        <div><span class="eyebrow">КАТАЛОГ</span><h2 id="catalog-title">Достижения</h2></div>
+        <p id="results-label">Загрузка базы…</p>
+      </div>
+
+      <div class="filters" id="filters">
+        <label class="search-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+          <input id="search-input" type="search" placeholder="Номер, название или условие…" autocomplete="off">
+          <kbd>Ctrl K</kbd>
+        </label>
+
+        <div class="segmented" aria-label="Статус достижения">
+          <button class="segment is-active" data-status="all" type="button">Все</button>
+          <button class="segment" data-status="unlocked" type="button">Открытые</button>
+          <button class="segment" data-status="locked" type="button">Закрытые</button>
+        </div>
+
+        <select id="edition-filter" aria-label="Фильтр по изданию">
+          <option value="all">Все издания</option>
+          <option value="Rebirth">Rebirth</option>
+          <option value="Afterbirth">Afterbirth</option>
+          <option value="Afterbirth+">Afterbirth+</option>
+          <option value="Repentance">Repentance</option>
+        </select>
+
+        <select id="type-filter" aria-label="Фильтр по типу">
+          <option value="all">Все типы</option>
+        </select>
+
+        <select id="sort-filter" aria-label="Сортировка">
+          <option value="id-asc">Сначала ранние</option>
+          <option value="id-desc">Сначала поздние</option>
+          <option value="name">По названию</option>
+          <option value="locked-first">Сначала закрытые</option>
+        </select>
+      </div>
+
+      <div class="active-save-notice" id="active-save-notice" hidden>
+        <span>✓</span>
+        <div><strong>Прогресс загружен</strong><small id="active-save-copy"></small></div>
+        <button id="replace-save" type="button">Выбрать другой файл</button>
+      </div>
+
+      <div class="achievement-grid" id="achievement-grid" aria-live="polite"></div>
+      <div class="empty-state" id="empty-state" hidden>
+        <strong>Ничего не найдено</strong>
+        <span>Попробуйте изменить поиск или фильтры.</span>
+        <button id="reset-filters" type="button">Сбросить фильтры</button>
+      </div>
+    </section>
+  </main>
+
+  <input class="visually-hidden" id="save-file" type="file" accept=".dat,application/octet-stream">
+
+  <div class="modal" id="save-guide" hidden>
+    <div class="modal__backdrop" data-close-guide></div>
+    <section class="modal__dialog guide-dialog" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <button class="modal__close" type="button" data-close-guide aria-label="Закрыть">×</button>
+      <span class="modal-eyebrow">Перед загрузкой</span>
+      <h2 id="guide-title">Где найти нужный файл?</h2>
+      <p class="modal-lead">Вы выбираете только файл прогресса Isaac. Другие файлы и папки сайт не видит. Содержимое никуда не отправляется.</p>
+
+      <div class="privacy-card"><span>🔒</span><div><strong>Обработка только в браузере</strong><p>Мы сохраняем в памяти браузера лишь список номеров открытых достижений, а не сам файл.</p></div></div>
+
+      <ol class="guide-steps">
+        <li><span>1</span><div><strong>Закройте игру</strong><p>Так последние открытия успеют записаться.</p></div></li>
+        <li><span>2</span><div><strong>Откройте папку Steam Cloud</strong><code>Steam\userdata\&lt;ваш Steam ID&gt;\250900\remote</code></div></li>
+        <li><span>3</span><div><strong>Выберите файл своего слота</strong><code>rep+persistentgamedata1.dat</code><p>Цифра 1, 2 или 3 соответствует слоту. Не выбирайте <code>gamestate</code>.</p></div></li>
+      </ol>
+
+      <details><summary>Другие возможные названия</summary><div class="file-examples"><code>rep_persistentgamedata1.dat</code><code>persistentgamedata1.dat</code></div></details>
+
+      <div class="modal-actions">
+        <button class="cancel-button" type="button" data-close-guide>Отмена</button>
+        <button class="primary-button" id="continue-file" type="button">Продолжить и выбрать файл</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal" id="achievement-modal" hidden>
+    <div class="modal__backdrop" data-close-achievement></div>
+    <article class="modal__dialog achievement-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+      <button class="modal__close" type="button" data-close-achievement aria-label="Закрыть">×</button>
+      <div id="achievement-detail"></div>
+    </article>
+  </div>
+
+  <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+  <footer class="site-footer">
+    <p>Неофициальный фанатский проект. The Binding of Isaac принадлежит своим правообладателям.</p>
+    <p>Тексты и изображения: русская The Binding of Isaac Wiki на Fandom, лицензия CC BY-SA.</p>
+  </footer>
+
+  <script src="data/achievements-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
